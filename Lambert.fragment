@@ -1,0 +1,33 @@
+#version 400
+in vec4 ex_worldPosition;			   
+in vec4 ex_worldNormal;			   
+out vec4 frag_colour;				   
+
+struct light {
+	vec3 position; 
+	vec4 diffuse;
+	vec4  specular; 
+
+
+};
+uniform light lights[3];
+
+vec4 temp_sum =  vec4(0,0,0,0);
+
+void main(void)					   
+{									   
+	for (int i = 0; i < 3; i++) {
+	vec3 lightVec = lights[i].position - vec3(ex_worldPosition);
+	float dist = length(lightVec);
+	float a = 0.5;											 
+	float b = 0.7;											 
+	float inten = 1 / (a *dist  + 1.0);
+	vec4 lightDirection = (vec4 (lights[i].position, 1)) - (ex_worldPosition);	
+	float dot_product = max(dot(normalize(vec3(ex_worldNormal)), normalize(vec3(lightDirection)) ), 0.0);
+
+	vec4 diffuse = dot_product * vec4(0.385 * lights[i].diffuse[0],0.647 *  lights[i].diffuse[1],0.812* lights[i].diffuse[2],1.0* lights[i].diffuse[3]);	   
+	vec4 ambient = 0.1 / 3 *  (vec4(0.385, 0.647, 0.812, 1.0));						   
+	temp_sum += 	 inten* diffuse +ambient;	
+	}
+	frag_colour =  temp_sum;    
+};

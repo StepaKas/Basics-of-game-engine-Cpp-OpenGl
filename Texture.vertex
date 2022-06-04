@@ -1,0 +1,23 @@
+#version 330
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 normal;
+layout (location = 2) in vec2 aTex;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 proj;
+uniform mat4 camMatrix;
+
+out vec2 uv;
+out vec4 ex_worldPosition;							   
+out vec4 ex_worldNormal;	
+void main () {
+
+     gl_Position = camMatrix * model * vec4(aPos,1.0);
+	 ex_worldPosition = model * vec4(aPos,1.0);		   
+	 ex_worldNormal =  normalize ( transpose (inverse(model)) * vec4(normal,1));	
+	 
+	 
+	 //ex_worldNormal = normalize( vec4(normal,1));
+	  uv = aTex;		
+
+};

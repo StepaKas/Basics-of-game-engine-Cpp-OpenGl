@@ -1,0 +1,95 @@
+#version 330
+out vec4 frag_colour;
+uniform sampler2D textureUnitID;
+in vec2 uv;
+in vec4 ex_worldPosition;			   
+in vec4 ex_worldNormal;	
+uniform float specular_intensity;
+uniform int texture_position_index;
+uniform vec3 camPos;
+uniform vec3 lookingDirection;
+uniform samplerCube cubemap;
+struct light {
+	vec3 position; 
+	vec4 diffuse;	
+	vec4  specular; 
+
+
+};
+uniform light lights[3];
+vec4 temp_sum =  vec4(0,0,0,0);
+vec4 temp_spec = vec4(0,0,0,0);
+
+float spotLight(){
+
+	float outerCone = 0.90f;
+	float innerCone = 0.95f;
+	vec3 lightVec = camPos - vec3(ex_worldPosition);
+	float dist = length(lightVec);
+	float a = 0.001;											 
+	float b = 0.1;		
+	float distance_intensity_reduction = 1 / (a *dist* dist + b * dist  + 1.0);
+
+	float ambient = 0.00f;
+
+	// diffuse lighting
+	vec4 normal = normalize((ex_worldNormal));	
+	vec4 lightDirection = normalize(vec4(camPos ,1)- ex_worldPosition);
+	float diffuse = max(dot(normal, lightDirection), 0.0f);
+
+	// spec lighting
+	float specularLight = 0.50f;
+	vec4 reflectionDirection = reflect(-lightDirection, normal);
+	float specAmount = pow(max(dot(lightDirection, reflectionDirection), 0.0f), 16);
+	float specular = specAmount * specularLight;
+
+	// uhel mezi tim kde cumim a danym fragmentem
+	float angle = dot( normalize(vec3(ex_worldPosition) - camPos) , normalize(lookingDirection));
+	// vrati intenzitu na zaklade toho jesli je fragment v danem kuzelu pohledu
+	float inten = clamp((angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0f);
+
+	return  (diffuse * inten * distance_intensity_reduction + ambient) + specular;
+}
+
+
+void main () {
+	vec3 normal = normalize(vec3(ex_worldNormal));	
+	vec3 viewDirection = normalize(camPos  -vec3 (ex_worldPosition));							  
+	for (int i = 0; i < 3; i++) {
+		vec3 lightVec = lights[i].position - vec3(ex_worldPosition);
+		float dist = length(lightVec);
+		float a = 0.001;											 
+		float b = 0.01;											 
+		float inten = 1 / (a *dist* dist + b * dist  + 1.0);
+
+
+
+		vec3 lightDirection = normalize( lightVec);
+		float dot_product = max(dot((normal), (lightDirection)), 0.0);
+
+		vec4 diffuse = dot_product * lights[i].diffuse;	   
+		vec4 ambient = (0.3/3 )* vec4(1, 1, 1, 1.0);						   
+
+		float specularLight =  specular_intensity;												  
+
+		vec3 reflectionDirection = (reflect((-lightDirection), (normal)));				  
+		float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 10);
+		float specular = specAmount * specularLight;								  
+		temp_sum += diffuse  * inten  + ambient ;	
+		temp_spec +=  lights[i].specular * specular ;
+		}
+		//skydome
+	/*if (texture_position_index == 2 || texture_position_index == 6){
+		frag_colour = texture(textureUnitID, uv);
+		return;
+	}*/
+	//skybox full light
+	if (texture_position_index == 5){
+		frag_colour = texture( (cubemap), vec3 (ex_worldPosition) -camPos);
+		return;
+	}
+     frag_colour =   texture(textureUnitID, uv) * temp_sum +temp_spec + spotLight()   ;
+
+	 //frag_colour =   texture(textureUnitID, uv);
+
+};
